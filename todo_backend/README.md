@@ -33,21 +33,24 @@ OpenAPI:
 
 Integration verification:
 1) Health and docs
-   - curl http://localhost:3001/        -> {"message":"Healthy"}
+   - curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3001/   # expect 200
    - Open http://localhost:3001/docs    -> Swagger UI loads
 2) CRUD quick check
    - Create:
      curl -s -X POST http://localhost:3001/todos -H "Content-Type: application/json" -d '{"title":"Test task"}'
    - List:
      curl -s http://localhost:3001/todos
-   - Update first id:
+   - Update first id (example assumes id 1):
      curl -s -X PUT http://localhost:3001/todos/1 -H "Content-Type: application/json" -d '{"completed": true}'
+   - Edit title:
+     curl -s -X PUT http://localhost:3001/todos/1 -H "Content-Type: application/json" -d '{"title":"Edited Task"}'
    - Delete:
      curl -s -X DELETE http://localhost:3001/todos/1 -i
 3) Persistence
    - DB file at: simple-todo-application-188632-188641/todo_backend/todo.db
-   - Example:
+   - Examples (run statements one at a time):
      sqlite3 "simple-todo-application-188632-188641/todo_backend/todo.db" "SELECT COUNT(*) FROM todos;"
+     sqlite3 "simple-todo-application-188632-188641/todo_backend/todo.db" "SELECT id,title,completed FROM todos ORDER BY id DESC LIMIT 10;"
 
 Troubleshooting:
 - CORS errors in browser console:
@@ -55,3 +58,5 @@ Troubleshooting:
   - For non-localhost or https origins, add them to `allow_origins`.
 - Mixed content (https frontend, http backend):
   - Use both over http in dev, or proxy requests via the frontend dev server.
+- If running frontend on a different port/host:
+  - Update allow_origins in src/api/main.py and set API_BASE in the frontend to your backend URL.
