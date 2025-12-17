@@ -158,12 +158,18 @@ def create_todo(payload: TodoIn):
 
     Returns the created todo item.
     """
+    # Trim and validate title
+    title = (payload.title or "").strip()
+    if not title:
+        # 422 Unprocessable Entity for empty/whitespace-only title
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Title must not be empty")
+
     now = datetime.utcnow().isoformat()
     conn = _get_conn()
     try:
         cur = conn.execute(
             "INSERT INTO todos (title, completed, created_at, updated_at) VALUES (?, ?, ?, ?)",
-            (payload.title.strip(), 0, now, now),
+            (title, 0, now, now),
         )
         conn.commit()
         new_id = cur.lastrowid
@@ -199,8 +205,20 @@ def update_todo(todo_id: int, payload: TodoUpdate):
         if not existing:
             raise HTTPException(status_code=404, detail="Todo not found")
 
-        new_title = payload.title.strip() if payload.title is not None else existing["title"]
-        new_completed = int(payload.completed) if payload.completed is not None else existing["completed"]
+        # If title is provided, trim and validate it; otherwise, keep existing title
+        if payload.title is not None:
+            new_title = (payload.title or "").strip()
+            if not new_title:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Title must not be empty")
+        else:
+            new_title = existing["title"]
+
+        # Handle completed robustly: accept booleans; None means leave as-is
+        if payload.completed is not None:
+            new_completed = 1 if bool(payload.completed) else 0
+        else:
+            new_completed = existing["completed"]
+
         now = datetime.utcnow().isoformat()
 
         conn.execute(
